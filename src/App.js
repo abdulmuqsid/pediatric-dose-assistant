@@ -179,51 +179,7 @@ function calcRuleBasedDose(med, weight, age, renalImpairment, hepaticImpairment)
   };
 }
 
-async function callClaudeAPI(patientData) {
-  const { age, weight, height, medication, indication, route, renalImpairment, hepaticImpairment } = patientData;
-  const prompt = `You are a clinical pharmacology AI assistant for educational purposes only. Calculate a safe pediatric dose recommendation for:
 
-Patient: Age ${age} years, Weight ${weight} kg, Height ${height} cm
-Medication: ${medication}
-Indication: ${indication}
-Route: ${route}
-Renal Impairment: ${renalImpairment ? "Yes" : "No"}
-Hepatic Impairment: ${hepaticImpairment ? "Yes" : "No"}
-
-Respond ONLY in this exact JSON format (no markdown, no explanation):
-{
-  "singleDose": <number in mg>,
-  "unit": "mg",
-  "dosePerKg": <number>,
-  "maxDailyDose": <number in mg>,
-  "interval": "<interval string>",
-  "route": "<recommended route>",
-  "safetyStatus": "<Within safe limits|Dose adjustment required|Contraindicated>",
-  "safetyColor": "<success|warning|danger>",
-  "warnings": ["<warning string>", ...],
-  "references": ["<reference>", ...],
-  "note": "<optional note or null>",
-  "source": "AI-Extrapolated (Allometric Scaling)",
-  "aiReasoning": "<brief 1-2 sentence explanation of calculation method>"
-}
-
-Use standard pediatric pharmacometric allometric scaling (weight exponent 0.75 for clearance) when extrapolating from adult data. Apply pediatric safety guardrails. For unknown medications, state limitations clearly in warnings.`;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-
-  const data = await response.json();
-  const text = data.content.map(i => i.text || "").join("");
-  const clean = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
-}
 
 const StatusBadge = ({ status, color }) => {
   const colors = {
