@@ -304,7 +304,7 @@ const handleCalculate = async () => {
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: "#070d1a", minHeight: "100vh", padding: 20, color: "#e2e8f0" }}>
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg, #6366f1, #06b6d4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🧒</div>
           <div>
@@ -324,7 +324,7 @@ const handleCalculate = async () => {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
 
         {/* LEFT PANEL */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
