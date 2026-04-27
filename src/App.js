@@ -130,19 +130,52 @@ function calcRuleBasedDose(med, weight, age, renalImpairment, hepaticImpairment,
     safetyStatus = "Contraindicated (age)";
     safetyColor = "danger";
   }
-  if (renalImpairment && g.contraindications?.includes("Renal Impairment")) {
-    warnings.push("Contraindicated in renal impairment — use alternative");
-    safetyColor = "danger";
+
+  if (renalImpairment) {
+    const renalWarnings = {
+      "Ibuprofen": { msg: "AVOID — NSAIDs reduce renal blood flow and worsen kidney function in children.", color: "danger", status: "Contraindicated" },
+      "Trimethoprim-Sulfamethoxazole": { msg: "Reduce dose by 50% if GFR 15–30. AVOID if GFR < 15 — risk of crystalluria, hyperkalemia and electrolyte imbalance.", color: "danger", status: "Dose adjustment required" },
+      "Metronidazole": { msg: "Metabolites may accumulate in severe renal failure — extend dosing interval to every 12h. Monitor for neurotoxicity.", color: "warning", status: "Dose adjustment required" },
+      "Ceftriaxone": { msg: "Reduce dose by 25–50% in severe renal impairment. Monitor drug levels if available.", color: "warning", status: "Dose adjustment required" },
+      "Amoxicillin": { msg: "Extend interval to every 12h if GFR < 30. Avoid high-dose regimen in severe renal impairment.", color: "warning", status: "Dose adjustment required" },
+      "Cetirizine": { msg: "Reduce dose to 2.5 mg once daily in renal impairment — drug is renally cleared.", color: "warning", status: "Dose adjustment required" },
+      "Ondansetron": { msg: "No adjustment needed for mild-moderate renal impairment. Use with caution in severe renal failure.", color: "warning", status: "Use with caution" },
+    };
+    const rw = renalWarnings[med];
+    if (rw) {
+      warnings.push("RENAL: " + rw.msg);
+      safetyColor = rw.color;
+      safetyStatus = rw.status;
+    } else {
+      warnings.push("RENAL: Use with caution — consult nephrology for dose adjustment.");
+      if (safetyColor !== "danger") safetyColor = "warning";
+      safetyStatus = "Dose adjustment required";
+    }
   }
-  if (renalImpairment && ["Metronidazole","Trimethoprim-Sulfamethoxazole","Ceftriaxone"].includes(med)) {
-    warnings.push("Renal impairment: consider dose interval extension. Consult nephrology.");
-    if (safetyColor !== "danger") safetyColor = "warning";
+
+  if (hepaticImpairment) {
+    const hepaticWarnings = {
+      "Paracetamol (Acetaminophen)": { msg: "REDUCE dose to 10 mg/kg and extend interval to every 8h. Max daily dose 40 mg/kg/day. Severe hepatic failure: AVOID — risk of fulminant hepatotoxicity.", color: "danger", status: "Dose adjustment required" },
+      "Metronidazole": { msg: "Metabolized extensively by the liver — reduce dose by 50% in severe hepatic impairment. Monitor for CNS side effects (encephalopathy risk).", color: "danger", status: "Dose adjustment required" },
+      "Ibuprofen": { msg: "AVOID in severe hepatic impairment — risk of hepatorenal syndrome and GI bleeding.", color: "danger", status: "Contraindicated" },
+      "Prednisolone": { msg: "Use with caution — hepatic impairment may increase steroid bioavailability. Monitor for cushingoid effects.", color: "warning", status: "Use with caution" },
+      "Ondansetron": { msg: "Reduce single dose to max 4 mg in severe hepatic impairment (Child-Pugh C) — reduced clearance.", color: "warning", status: "Dose adjustment required" },
+      "Azithromycin": { msg: "AVOID in severe hepatic impairment — primarily hepatically metabolized and excreted in bile.", color: "danger", status: "Contraindicated" },
+      "Cetirizine": { msg: "No hepatic dose adjustment needed — renally cleared, not hepatically metabolized.", color: "success", status: "Within safe limits" },
+    };
+    const hw = hepaticWarnings[med];
+    if (hw) {
+      warnings.push("HEPATIC: " + hw.msg);
+      if (hw.color === "danger" || safetyColor === "danger") safetyColor = "danger";
+      else if (hw.color === "warning") safetyColor = "warning";
+      safetyStatus = hw.status;
+    } else {
+      warnings.push("HEPATIC: Use with caution — consult hepatology for dose adjustment.");
+      if (safetyColor !== "danger") safetyColor = "warning";
+      safetyStatus = "Dose adjustment required";
+    }
   }
-  if (hepaticImpairment && ["Paracetamol (Acetaminophen)","Metronidazole"].includes(med)) {
-    warnings.push("Hepatic impairment: reduce dose/frequency. Monitor LFTs.");
-    if (safetyColor !== "danger") safetyColor = "warning";
-  }
-  if (safetyColor === "warning") safetyStatus = "Dose adjustment required";
+  
 
   // Indication-specific dosing
   if (g.indicationDoses) {
