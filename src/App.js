@@ -46,9 +46,15 @@ const GUIDELINE_DOSES = {
     contraindications: ["Renal Impairment", "< 6 months age"],
   },
   "Amoxicillin": {
-    mgPerKgPerDose: null, mgPerKgPerDay: 40, maxMgPerKgPerDay: 90, absoluteMaxPerDay: 3000,
-    dividedDoses: 3, interval: "Every 8 hours", intervalHours: 8, route: "Oral",
-    ageMin: 0, references: ["AAP Red Book 2021–2024", "Nelson's Pediatric Antimicrobial Therapy"],
+    indicationDoses: {
+    "Otitis Media":    { mgPerKgPerDay: 80, dividedDoses: 3, interval: "Every 8 hours", note: "High-dose for AOM" },
+    "Strep Throat":    { mgPerKgPerDay: 50, dividedDoses: 2, interval: "Every 12 hours", note: "Standard strep dosing" },
+    "Pneumonia":       { mgPerKgPerDay: 90, dividedDoses: 3, interval: "Every 8 hours", note: "High-dose for pneumonia" },
+    "Sinusitis":       { mgPerKgPerDay: 80, dividedDoses: 3, interval: "Every 8 hours", note: "High-dose for sinusitis" },
+    "UTI":             { mgPerKgPerDay: 40, dividedDoses: 3, interval: "Every 8 hours", note: "Standard UTI dosing" },
+  },
+  absoluteMaxPerDay: 3000, route: "Oral", ageMin: 0,
+  references: ["AAP Red Book 2021–2024", "Nelson's Pediatric Antimicrobial Therapy"],
   },
   "Azithromycin": {
     mgPerKgPerDose: 10, maxMgPerKgPerDay: 10, absoluteMaxPerDose: 500, absoluteMaxPerDay: 500,
@@ -92,18 +98,26 @@ const GUIDELINE_DOSES = {
     ageMin: 0, references: ["Sanford Guide", "AAP Red Book 2021-2024"],
   },
   "Dexamethasone": {
-    mgPerKgPerDose: 0.15, maxMgPerKgPerDay: 0.6, absoluteMaxPerDose: 10, absoluteMaxPerDay: 40,
-    interval: "Every 6 hours (croup: single dose 0.6 mg/kg)", intervalHours: 6, route: "Oral/IV/IM",
-    ageMin: 0, references: ["Cochrane Review Croup 2018", "AAP Clinical Guidelines"],
+    indicationDoses: {
+    "Croup":               { mgPerKgPerDose: 0.6, maxPerDose: 10, interval: "Single dose", note: "Single dose for croup" },
+    "Meningitis":          { mgPerKgPerDose: 0.15, maxPerDose: 10, interval: "Every 6 hours x 4 days", note: "Give before or with first antibiotic dose" },
+    "Asthma Exacerbation": { mgPerKgPerDose: 0.6, maxPerDose: 16, interval: "Once daily x 1–2 days", note: "Short course for asthma" },
+  },
+  route: "Oral/IV/IM", ageMin: 0,
+  references: ["Cochrane Review Croup 2018", "AAP Clinical Guidelines"],
   },
   "Ondansetron": {
-    mgPerKgPerDose: 0.15, maxMgPerKgPerDay: 0.45, absoluteMaxPerDose: 8, absoluteMaxPerDay: 24,
-    interval: "Every 8 hours as needed", intervalHours: 8, route: "Oral/IV",
-    ageMin: 0.5, references: ["AAP Gastroenteritis Guidelines", "BNF for Children"],
+     indicationDoses: {
+    "Nausea":          { mgPerKgPerDose: 0.15, maxPerDose: 8, interval: "Every 8 hours as needed" },
+    "Vomiting":        { mgPerKgPerDose: 0.15, maxPerDose: 8, interval: "Every 8 hours as needed" },
+    "Gastroenteritis": { mgPerKgPerDose: 0.15, maxPerDose: 8, interval: "Every 8 hours as needed", note: "Single dose often sufficient" },
+  },
+  route: "Oral/IV", ageMin: 0.5,
+  references: ["AAP Gastroenteritis Guidelines", "BNF for Children"], 
   },
 };
 
-function calcRuleBasedDose(med, weight, age, renalImpairment, hepaticImpairment) {
+function calcRuleBasedDose(med, weight, age, renalImpairment, hepaticImpairment, indication) {
   const g = GUIDELINE_DOSES[med];
   if (!g) return null;
 
@@ -112,41 +126,44 @@ function calcRuleBasedDose(med, weight, age, renalImpairment, hepaticImpairment)
   let safetyColor = "success";
 
   if (g.ageMin && age < g.ageMin) {
-    warnings.push(`⚠️ Not recommended for age < ${g.ageMin < 1 ? Math.round(g.ageMin * 12) + " months" : g.ageMin + " years"}`);
+    warnings.push(`Not recommended for age < ${g.ageMin < 1 ? Math.round(g.ageMin * 12) + " months" : g.ageMin + " years"}`);
     safetyStatus = "Contraindicated (age)";
     safetyColor = "danger";
   }
   if (renalImpairment && g.contraindications?.includes("Renal Impairment")) {
-    warnings.push("⚠️ Contraindicated in renal impairment — use alternative");
-    safetyStatus = "Dose adjustment required";
-    safetyColor = "warning";
+    warnings.push("Contraindicated in renal impairment — use alternative");
+    safetyColor = "danger";
   }
-  if (renalImpairment && ["Metronidazole", "Trimethoprim-Sulfamethoxazole", "Ceftriaxone"].includes(med)) {
-    warnings.push("⚠️ Renal impairment: consider dose interval extension. Consult nephrology.");
+  if (renalImpairment && ["Metronidazole","Trimethoprim-Sulfamethoxazole","Ceftriaxone"].includes(med)) {
+    warnings.push("Renal impairment: consider dose interval extension. Consult nephrology.");
     if (safetyColor !== "danger") safetyColor = "warning";
   }
-  if (hepaticImpairment && ["Paracetamol (Acetaminophen)", "Metronidazole"].includes(med)) {
-    warnings.push("⚠️ Hepatic impairment: reduce dose/frequency. Monitor LFTs.");
+  if (hepaticImpairment && ["Paracetamol (Acetaminophen)","Metronidazole"].includes(med)) {
+    warnings.push("Hepatic impairment: reduce dose/frequency. Monitor LFTs.");
     if (safetyColor !== "danger") safetyColor = "warning";
   }
-
   if (safetyColor === "warning") safetyStatus = "Dose adjustment required";
 
-  if (g.special && g.ageDoses) {
-    const tier = g.ageDoses.find(t => age >= t.minAge && age < t.maxAge);
-    if (!tier) return null;
+  // Indication-specific dosing
+  if (g.indicationDoses) {
+    const indDose = g.indicationDoses[indication] || Object.values(g.indicationDoses)[0];
+    let singleDose;
+    if (indDose.mgPerKgPerDose) {
+      singleDose = Math.min(indDose.mgPerKgPerDose * weight, indDose.maxPerDose || 9999);
+    } else if (indDose.mgPerKgPerDay && indDose.dividedDoses) {
+      singleDose = Math.min((indDose.mgPerKgPerDay * weight) / indDose.dividedDoses, (g.absoluteMaxPerDay || 9999) / indDose.dividedDoses);
+    }
+    if (indDose.note) warnings.unshift(indDose.note);
     return {
-      singleDose: tier.dose,
+      singleDose: Math.round(singleDose * 10) / 10,
       unit: "mg",
-      dosePerKg: (tier.dose / weight).toFixed(2),
-      maxDailyDose: tier.maxDose * Math.floor(24 / g.intervalHours),
-      interval: g.interval,
+      dosePerKg: indDose.mgPerKgPerDose || (indDose.mgPerKgPerDay / indDose.dividedDoses),
+      maxDailyDose: g.absoluteMaxPerDay || Math.round(singleDose * (indDose.dividedDoses || 1)),
+      interval: indDose.interval,
       route: g.route,
-      safetyStatus,
-      safetyColor,
-      warnings,
+      safetyStatus, safetyColor, warnings,
       references: g.references,
-      note: g.note || null,
+      note: null,
       source: "Guideline-based",
     };
   }
@@ -267,7 +284,7 @@ const handleCalculate = async () => {
     setError(null);
     setResult(null);
     try {
-      let res = calcRuleBasedDose(medication, weight, age, renalImpairment, hepaticImpairment);
+      let res = calcRuleBasedDose(medication, weight, age, renalImpairment, hepaticImpairment, indication);
       if (!res) {
         setError("This medication isn't in the guideline database yet. An API key is required for AI extrapolation.");
       } else {
